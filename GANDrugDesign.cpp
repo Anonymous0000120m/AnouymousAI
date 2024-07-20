@@ -3,26 +3,41 @@
 #include <fstream>
 #include <string>
 #include <random>
+#include <memory> // for std::unique_ptr
+
 #include <RDKit/GraphMol/Mol.h>
 #include <RDKit/GraphMol/MolToSmiles.h>
 #include <RDKit/Descriptors/MolDescriptors.h>
-#include <tensorflow/core/public/session.h>
-#include <tensorflow/cc/keras/keras.h>
+#include <RDKit/GraphMol/SmilesParse.h>
+#include <tensorflow/cc/client/client_session.h>
+#include <tensorflow/cc/ops/standard_ops.h>
+#include <tensorflow/core/framework/tensor.h>
 
 using namespace RDKit;
 using namespace tensorflow;
+using namespace tensorflow::ops;
 
 class GANDrugDesign {
 public:
-    GANDrugDesign(int num_features, int noise_dim) :
-        num_features(num_features), noise_dim(noise_dim) {
+    GANDrugDesign(int num_features, int noise_dim)
+        : num_features(num_features), noise_dim(noise_dim) {
         build_generator();
     }
 
     void build_generator() {
-        // Define the TensorFlow model for the generator
-        // (pseudo code, needs TensorFlow C++ setup)
-        // ...
+        // Building a simple feedforward neural network as a generator
+        // Note: This is a placeholder example. The actual Tensorflow C++ API 
+        // requires a complete model setup to work effectively.
+
+        // Using TensorFlow's graph construction features
+        Scope root = Scope::NewRootScope();
+        auto input = Placeholder(root.WithOpName("input"), DT_FLOAT, Placeholder::Shape({-1, noise_dim}));
+
+        auto dense1 = Dense(root.WithOpName("dense1"), input, 128, Dense::Activation::RELU);
+        auto output = Dense(root.WithOpName("output"), dense1, num_features, Dense::Activation::TANH);
+
+        // Saving the graph for future use
+        TF_CHECK_OK(root.ToGraph(&graph));
     }
 
     std::vector<std::vector<float>> generate_samples(int num_samples) {
@@ -35,34 +50,38 @@ public:
                 value = distribution(generator);
             }
         }
-        // Generate samples using the TensorFlow generator model
-        // (pseudo code for model prediction)
-        // ...
-        return samples;
+
+        // Placeholder for actual TensorFlow session to run the graph
+        ClientSession session;
+        std::vector<Tensor> outputs;
+        // Here, you would feed input samples into the model
+        // and obtain generated samples (not implemented in this example)
+
+        return samples; // Return dummy samples
     }
 
 private:
     int num_features;
     int noise_dim;
-    // Add TensorFlow model members as needed
+    Graph graph;
 };
 
 class ChemicalStructureDesign {
 public:
-    ChemicalStructureDesign(int num_samples, int num_features, int noise_dim) :
-        num_samples(num_samples), num_features(num_features), noise_dim(noise_dim),
-        gan_model(num_features, noise_dim) {}
+    ChemicalStructureDesign(int num_samples, int num_features, int noise_dim)
+        : num_samples(num_samples), num_features(num_features), noise_dim(noise_dim),
+          gan_model(num_features, noise_dim) {}
 
     std::vector<std::string> design_chemical_structures(const std::vector<std::vector<float>>& samples) {
         std::vector<std::string> designed_structures;
 
         for (const auto& sample : samples) {
             for (const auto& s : sample) {
-                std::string atom_label = "C" + std::to_string(static_cast<int>(s * 1000000)); // Scale and convert
+                std::string atom_label = "C" + std::to_string(static_cast<int>(s * 1000000));
                 ROMol* mol = SmilesToMol(atom_label);
                 if (mol) {
                     // Modify structure
-                    std::string modified_smiles = atom_label + "O";
+                    std::string modified_smiles = atom_label + "O"; // Add Hydroxy group
                     modified_smiles += "C1CCCC1"; // Add a ring
                     modified_smiles = modified_smiles.substr(0, 1) + "=C" + modified_smiles.substr(1); // Add double bond
 
@@ -102,8 +121,9 @@ public:
     }
 
     void train_gan(int epochs) {
-        // Implement GAN training (pseudo code)
-        // ...
+        // Implement GAN training (dummy for now)
+        std::cout << "Training GAN for " << epochs << " epochs." << std::endl;
+        // Actual GAN training logic would go here
     }
 
     void train_and_generate_structures(int epochs, const std::string& output_file) {
